@@ -969,14 +969,17 @@
                         familyId = doc.data().familyId;
                         subscribeToFamilyData(familyId);
                     } else {
-                        // 顯示家庭設定頁面
+                        // 如果文件不存在或沒有 familyId，顯示家庭設定頁面
                         familySetupContainer.style.display = 'flex';
                         mainPage.style.display = 'none';
                         childDetailPage.style.display = 'none';
                     }
                 }).catch(error => {
                     console.error("Error getting user document:", error);
-                    alert("載入使用者資料失敗，請檢查網路或重新登入。");
+                    // 這裡不再顯示 alert，因為這是一個預期中的錯誤，我們將直接顯示設定頁面
+                    familySetupContainer.style.display = 'flex';
+                    mainPage.style.display = 'none';
+                    childDetailPage.style.display = 'none';
                 });
 
             } else {

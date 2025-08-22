@@ -342,6 +342,27 @@
             margin-bottom: 10px;
         }
         
+        .goal-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .goal-text {
+            font-size: 1.1em;
+            color: #555;
+            font-weight: bold;
+        }
+
+        .goal-container .btn {
+            padding: 5px 10px;
+            font-size: 0.9em;
+            border-radius: 15px;
+        }
+        
         .progress-bar {
             width: 100%;
             height: 10px;
@@ -406,12 +427,13 @@
         }
 
         .redeem-btn {
-            color: #3498db;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
             font-weight: bold;
         }
 
         .redeem-btn:hover {
-            color: #2980b9;
+            background: linear-gradient(135deg, #2980b9, #3498db);
         }
 
         .reward-info {
@@ -613,8 +635,12 @@
                     <h2 id="detailChildName">小孩姓名</h2>
                     <div class="detail-points" id="detailChildPoints">0</div>
                     <p>目前點數</p>
-                    <div id="goalSection">
-                        <p id="goalText"></p>
+                    <div id="goalSection" style="display: none;">
+                        <div class="goal-container">
+                             <span class="goal-text" id="goalText"></span>
+                             <button class="btn btn-primary" id="redeemGoalBtn" style="display:none;">兌換</button>
+                             <button class="btn btn-secondary" id="deleteGoalBtn" style="display:none;">刪除</button>
+                        </div>
                         <div class="progress-bar">
                             <div class="progress-bar-fill" id="goalProgressBar"></div>
                         </div>
@@ -746,6 +772,8 @@
         const addRecordSection = document.getElementById('addRecordSection');
         const reasonOptionsSection = document.getElementById('reasonOptionsSection');
         const rewardsSection = document.getElementById('rewardsSection');
+        const redeemGoalBtn = document.getElementById('redeemGoalBtn');
+        const deleteGoalBtn = document.getElementById('deleteGoalBtn');
 
         // 應用程式狀態
         let appData = {
@@ -781,12 +809,16 @@
                 addRecordSection.style.display = 'block';
                 reasonOptionsSection.style.display = 'block';
                 rewardsSection.style.display = 'block';
+                redeemGoalBtn.style.display = 'inline-block';
+                deleteGoalBtn.style.display = 'inline-block';
             } else {
                 addChildSection.style.display = 'none';
                 goalsSection.style.display = 'none';
                 addRecordSection.style.display = 'none';
                 reasonOptionsSection.style.display = 'none';
                 rewardsSection.style.display = 'none';
+                redeemGoalBtn.style.display = 'none';
+                deleteGoalBtn.style.display = 'none';
             }
         }
 
@@ -923,11 +955,16 @@
             const goalSection = document.getElementById('goalSection');
             const goalText = document.getElementById('goalText');
             const goalProgressBar = document.getElementById('goalProgressBar');
+
             if (child.goal && child.goal.points > 0) {
                 const progress = Math.min(100, (child.points / child.goal.points) * 100);
                 goalText.textContent = `目標：${child.goal.reason} (${child.points} / ${child.goal.points} 點)`;
                 goalProgressBar.style.width = `${progress}%`;
                 goalSection.style.display = 'block';
+                if (userRole === 'admin') {
+                    deleteGoalBtn.style.display = 'inline-block';
+                    redeemGoalBtn.style.display = child.points >= child.goal.points ? 'inline-block' : 'none';
+                }
             } else {
                 goalSection.style.display = 'none';
             }
@@ -1234,6 +1271,34 @@
             goalReasonInput.value = '';
             goalPointsInput.value = '';
             saveData();
+        });
+
+        // 兌換目標
+        redeemGoalBtn.addEventListener('click', () => {
+            if (userRole !== 'admin') { alert("你沒有權限進行此操作。"); return; }
+            const child = appData.children.find(c => c.id === currentChildId);
+            if (!child || !child.goal) return;
+            if (child.points < child.goal.points) {
+                alert('點數不足，無法兌換！');
+                return;
+            }
+            if (confirm(`確定要兌換「${child.goal.reason}」並將點數歸零嗎？`)) {
+                child.points -= child.goal.points;
+                child.goal = null;
+                child.records.unshift({ id: generateUniqueId(), reason: `兌換了目標: ${child.goal.reason}`, points: -child.goal.points, timestamp: new Date().toISOString() });
+                saveData();
+            }
+        });
+
+        // 刪除目標
+        deleteGoalBtn.addEventListener('click', () => {
+            if (userRole !== 'admin') { alert("你沒有權限進行此操作。"); return; }
+            const child = appData.children.find(c => c.id === currentChildId);
+            if (!child || !child.goal) return;
+            if (confirm(`確定要刪除「${child.goal.reason}」這個目標嗎？`)) {
+                child.goal = null;
+                saveData();
+            }
         });
         
         // 回到主頁面

@@ -1121,8 +1121,14 @@
         // 建立新家庭按鈕
         document.getElementById('createFamilyBtn').addEventListener('click', () => {
             const newFamilyId = generateUniqueId();
-            // 在 users 文件中設定家庭 ID 和角色
             db.collection('users').doc(userUid).set({ familyId: newFamilyId, role: 'admin' }).then(() => {
+                // 修正：在建立使用者文件後，立即建立家庭文件
+                return db.collection('families').doc(newFamilyId).set({
+                    children: [],
+                    commonReasons: [],
+                    rewardsList: [],
+                });
+            }).then(() => {
                 familyCodeDisplay.textContent = `你的家庭代碼是：${newFamilyId}`;
                 familyCodeDisplay.style.display = 'block';
                 subscribeToFamilyData(newFamilyId);

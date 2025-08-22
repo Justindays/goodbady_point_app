@@ -35,6 +35,7 @@
             color: white;
             text-align: center;
             padding: 30px 20px;
+            position: relative;
         }
 
         .header h1 {
@@ -65,7 +66,7 @@
             color: #333;
         }
         
-        .login-btn {
+        .login-btn, .logout-btn {
             background-color: #4285F4;
             color: white;
             padding: 12px 20px;
@@ -79,6 +80,45 @@
         
         .login-btn:hover {
             background-color: #3367D6;
+        }
+
+        .logout-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: transparent;
+            color: white;
+            border: 2px solid white;
+            padding: 8px 15px;
+            font-size: 0.9em;
+        }
+
+        .logout-btn:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .family-code-display {
+            background: #f0f0f0;
+            color: #666;
+            text-align: center;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9em;
+            overflow-wrap: break-word;
+            word-break: break-all;
+        }
+        
+        .family-code-display button {
+            background: none;
+            border: none;
+            color: #4285F4;
+            font-weight: bold;
+            cursor: pointer;
         }
 
         .add-child-section, .add-record-section, .rewards-section, .goals-section {
@@ -422,6 +462,76 @@
         .reason-options li span:hover {
             color: #d63031;
         }
+        
+        /* 手機響應式調整 */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .container {
+                border-radius: 0;
+                box-shadow: none;
+            }
+            
+            .header h1 {
+                font-size: 1.8em;
+            }
+            
+            .header p {
+                font-size: 1em;
+            }
+            
+            .content {
+                padding: 20px 15px;
+            }
+            
+            .input-group {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+            
+            .child-item, .record-item, .reward-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .record-info {
+                order: 2;
+            }
+            
+            .record-points {
+                order: 1;
+                margin-bottom: 5px;
+            }
+
+            .child-points {
+                align-self: flex-end;
+            }
+
+            .action-buttons {
+                align-self: flex-start;
+            }
+            
+            .reward-info {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+            
+            .reward-price {
+                align-self: flex-end;
+            }
+            
+            .rewards-list .action-buttons {
+                align-self: flex-end;
+            }
+        }
     </style>
 </head>
 <body>
@@ -429,6 +539,7 @@
         <div class="header">
             <h1>🌟 好寶寶點數記錄 (家庭共用版)</h1>
             <p>使用 Google 帳號，與家人同步資料！</p>
+            <button class="logout-btn" id="signOutBtn" style="display:none;">登出</button>
         </div>
 
         <div id="authContainer" style="display: none;">
@@ -451,6 +562,11 @@
 
         <div id="mainPage" style="display: none;">
             <div class="content">
+                <div class="family-code-display" style="display: none;">
+                    你的家庭代碼：<strong id="currentFamilyCode"></strong>
+                    <button id="copyCodeBtn">複製</button>
+                </div>
+
                 <div class="add-child-section">
                     <h2>➕ 新增小孩</h2>
                     <div class="input-group">
@@ -599,6 +715,10 @@
         const goalPointsInput = document.getElementById('goalPoints');
         const familyCodeInput = document.getElementById('familyCodeInput');
         const familyCodeDisplay = document.getElementById('familyCodeDisplay');
+        const signOutBtn = document.getElementById('signOutBtn');
+        const currentFamilyCodeDisplay = document.querySelector('.family-code-display');
+        const currentFamilyCodeText = document.getElementById('currentFamilyCode');
+        const copyCodeBtn = document.getElementById('copyCodeBtn');
 
         // 應用程式狀態
         let appData = {
@@ -802,6 +922,8 @@
                 unsubscribeFromFamily();
             }
             familyId = newFamilyId;
+            currentFamilyCodeText.textContent = familyId;
+            currentFamilyCodeDisplay.style.display = 'flex';
             // 訂閱 Firestore 資料，實現即時同步
             unsubscribeFromFamily = db.collection('families').doc(familyId)
                 .onSnapshot(doc => {
@@ -829,6 +951,7 @@
             
             mainPage.style.display = 'block';
             familySetupContainer.style.display = 'none';
+            signOutBtn.style.display = 'block';
         }
 
         // --- 事件監聽器 ---
@@ -838,6 +961,7 @@
             if (user) {
                 userUid = user.uid;
                 authContainer.style.display = 'none';
+                signOutBtn.style.display = 'block';
 
                 // 檢查使用者是否已經有家庭 ID
                 db.collection('users').doc(userUid).get().then(doc => {
@@ -862,6 +986,7 @@
                 mainPage.style.display = 'none';
                 familySetupContainer.style.display = 'none';
                 childDetailPage.style.display = 'none';
+                signOutBtn.style.display = 'none';
                 if (unsubscribeFromFamily) {
                     unsubscribeFromFamily();
                 }
@@ -874,6 +999,16 @@
             auth.signInWithPopup(provider).catch(error => {
                 console.error("Google Sign-in Error:", error);
                 alert("登入失敗，請稍後再試。");
+            });
+        });
+        
+        // 登出按鈕
+        signOutBtn.addEventListener('click', () => {
+            auth.signOut().then(() => {
+                alert("已成功登出。");
+            }).catch(error => {
+                console.error("Sign Out Error:", error);
+                alert("登出失敗，請稍後再試。");
             });
         });
 
@@ -988,6 +1123,17 @@
             mainPage.style.display = 'block';
             childDetailPage.style.display = 'none';
         });
+
+        // 複製家庭代碼
+        copyCodeBtn.addEventListener('click', () => {
+            const code = currentFamilyCodeText.textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                alert('家庭代碼已複製到剪貼簿！');
+            }).catch(err => {
+                console.error('複製失敗: ', err);
+            });
+        });
+
 
         // 事件委派
         childrenContainer.addEventListener('click', (e) => {

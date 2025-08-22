@@ -1037,11 +1037,13 @@
                 alert("請輸入家庭代碼！");
                 return;
             }
-            // 檢查家庭代碼是否存在
+
+            // 步驟 1: 檢查家庭代碼是否存在
             db.collection('families').doc(inputCode).get().then(doc => {
                 if (doc.exists) {
-                    // 更新使用者文件以加入此家庭
+                    // 步驟 2: 如果家庭存在，先在 users 集合中建立或更新使用者文件
                     return db.collection('users').doc(userUid).set({ familyId: inputCode }).then(() => {
+                        // 步驟 3: 更新成功後，再訂閱家庭資料
                         subscribeToFamilyData(inputCode);
                     });
                 } else {
@@ -1052,6 +1054,7 @@
                 alert("加入家庭失敗，請稍後再試。");
             });
         });
+
 
         // 新增小孩
         addChildBtn.addEventListener('click', () => {

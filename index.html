@@ -165,7 +165,7 @@
             transition: all 0.3s ease;
         }
         
-        .auth-form input {
+        .auth-form-input {
             width: 100%;
             padding: 12px 18px;
             border: none;
@@ -175,13 +175,7 @@
             transition: all 0.3s ease;
         }
 
-        .input-group input:focus {
-            outline: none;
-            background: white;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-        
-        .auth-form input:focus {
+        .input-group input:focus, .auth-form-input:focus {
             outline: none;
             background: white;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
@@ -787,14 +781,12 @@
                 addRecordSection.style.display = 'block';
                 reasonOptionsSection.style.display = 'block';
                 rewardsSection.style.display = 'block';
-                document.querySelectorAll('.edit-btn, .delete-btn').forEach(el => el.style.display = 'block');
             } else {
                 addChildSection.style.display = 'none';
                 goalsSection.style.display = 'none';
                 addRecordSection.style.display = 'none';
                 reasonOptionsSection.style.display = 'none';
                 rewardsSection.style.display = 'none';
-                document.querySelectorAll('.edit-btn, .delete-btn').forEach(el => el.style.display = 'none');
             }
         }
 
@@ -1147,10 +1139,16 @@
                 alert("請輸入家庭代碼！");
                 return;
             }
+            
+            // 檢查家庭代碼是否存在
             db.collection('families').doc(inputCode).get().then(doc => {
                 if (doc.exists) {
-                    // 更新使用者文件以加入此家庭，並設定角色為 member
-                    return db.collection('users').doc(userUid).set({ familyId: inputCode, role: 'member' }).then(() => {
+                    // 詢問使用者是否為管理員
+                    const is_admin = confirm("你是這個家庭的管理員嗎？\n\n是 (確定): 你將有權限修改點數、新增小孩和獎勵。\n否 (取消): 你只能查看點數，沒有修改權限。");
+                    const role = is_admin ? 'admin' : 'member';
+
+                    // 更新使用者文件以加入此家庭，並設定選定的角色
+                    return db.collection('users').doc(userUid).set({ familyId: inputCode, role: role }).then(() => {
                         subscribeToFamilyData(inputCode);
                     });
                 } else {

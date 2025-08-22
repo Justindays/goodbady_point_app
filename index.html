@@ -932,25 +932,29 @@
                         if (!appData.children) appData.children = [];
                         if (!appData.commonReasons) appData.commonReasons = [];
                         if (!appData.rewardsList) appData.rewardsList = [];
+                        renderChildren();
+                        renderRewards();
+                        renderCommonReasons();
+                        if (currentChildId) {
+                            renderRecords();
+                            renderGoals();
+                        }
+                        // 顯示主頁面
+                        mainPage.style.display = 'block';
+                        familySetupContainer.style.display = 'none';
+                        childDetailPage.style.display = 'none';
                     } else {
-                        appData = { children: [], commonReasons: [], rewardsList: [] };
-                        saveData(); // 建立空資料
-                    }
-                    renderChildren();
-                    renderRewards();
-                    renderCommonReasons();
-                    // 如果在詳細頁面，也重新渲染
-                    if(currentChildId) {
-                        renderRecords();
-                        renderGoals();
+                        // 如果家庭文件不存在，導回家庭設定頁面
+                        familySetupContainer.style.display = 'flex';
+                        mainPage.style.display = 'none';
+                        childDetailPage.style.display = 'none';
+                        console.warn("家庭資料不存在，導向家庭設定頁面。");
                     }
                 }, error => {
                     console.error("Firestore snapshot error:", error);
                     alert("載入資料失敗，請檢查網路或重新登入。");
                 });
             
-            mainPage.style.display = 'block';
-            familySetupContainer.style.display = 'none';
             signOutBtn.style.display = 'block';
         }
 

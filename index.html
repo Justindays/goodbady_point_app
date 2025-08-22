@@ -164,8 +164,24 @@
             background: rgba(255, 255, 255, 0.9);
             transition: all 0.3s ease;
         }
+        
+        .auth-form input {
+            width: 100%;
+            padding: 12px 18px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.9);
+            transition: all 0.3s ease;
+        }
 
         .input-group input:focus {
+            outline: none;
+            background: white;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .auth-form input:focus {
             outline: none;
             background: white;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
@@ -545,8 +561,8 @@
         <div id="authContainer" style="display: none;">
             <h2>請先登入或註冊</h2>
             <div style="width: 100%; display: flex; flex-direction: column; gap: 10px;">
-                <input type="email" id="emailInput" placeholder="電子郵件" class="input-field" required>
-                <input type="password" id="passwordInput" placeholder="密碼 (至少6位)" class="input-field" required>
+                <input type="email" id="emailInput" placeholder="電子郵件" class="auth-form-input" required>
+                <input type="password" id="passwordInput" placeholder="密碼 (至少6位)" class="auth-form-input" required>
                 <button class="btn btn-primary" id="signUpBtn">註冊</button>
                 <button class="btn btn-secondary" id="signInBtn">登入</button>
             </div>
@@ -573,7 +589,7 @@
                     <button id="copyCodeBtn">複製</button>
                 </div>
 
-                <div class="add-child-section">
+                <div class="add-child-section" id="addChildSection">
                     <h2>➕ 新增小孩</h2>
                     <div class="input-group">
                         <input type="text" id="childName" placeholder="輸入小孩姓名..." maxlength="20">
@@ -611,7 +627,7 @@
                     </div>
                 </div>
 
-                <div class="goals-section">
+                <div class="goals-section" id="goalsSection">
                     <h3>🏆 設定目標</h3>
                     <div class="input-group">
                         <input type="text" id="goalReason" placeholder="目標名稱..." maxlength="50">
@@ -620,7 +636,7 @@
                     </div>
                 </div>
 
-                <div class="add-record-section">
+                <div class="add-record-section" id="addRecordSection">
                     <h3>📝 新增記錄</h3>
                     <div class="record-form">
                         <div class="input-group">
@@ -643,7 +659,7 @@
                     </div>
                 </div>
                 
-                <div class="reason-options">
+                <div class="reason-options" id="reasonOptionsSection">
                     <h3>常用原因清單</h3>
                     <ul id="commonReasonsList">
                         </ul>
@@ -661,7 +677,7 @@
                     </div>
                 </div>
 
-                <div class="rewards-section">
+                <div class="rewards-section" id="rewardsSection">
                     <h3>🎁 管理獎勵</h3>
                     <div class="input-group">
                         <input type="text" id="rewardNameInput" placeholder="獎勵名稱..." maxlength="50">
@@ -731,12 +747,19 @@
         const signInBtn = document.getElementById('signInBtn');
         const authErrorMsg = document.getElementById('authErrorMsg');
 
+        const addChildSection = document.getElementById('addChildSection');
+        const goalsSection = document.getElementById('goalsSection');
+        const addRecordSection = document.getElementById('addRecordSection');
+        const reasonOptionsSection = document.getElementById('reasonOptionsSection');
+        const rewardsSection = document.getElementById('rewardsSection');
+
         // 應用程式狀態
         let appData = {
             children: [],
             commonReasons: [],
             rewardsList: [],
         };
+        let userRole = null;
         let currentChildId = null;
         let currentEditingRewardId = null;
         let unsubscribeFromFamily = null;
@@ -756,6 +779,25 @@
             }
         }
         
+        // 根據角色顯示或隱藏管理區塊
+        function updateUIVisibility() {
+            if (userRole === 'admin') {
+                addChildSection.style.display = 'block';
+                goalsSection.style.display = 'block';
+                addRecordSection.style.display = 'block';
+                reasonOptionsSection.style.display = 'block';
+                rewardsSection.style.display = 'block';
+                document.querySelectorAll('.edit-btn, .delete-btn').forEach(el => el.style.display = 'block');
+            } else {
+                addChildSection.style.display = 'none';
+                goalsSection.style.display = 'none';
+                addRecordSection.style.display = 'none';
+                reasonOptionsSection.style.display = 'none';
+                rewardsSection.style.display = 'none';
+                document.querySelectorAll('.edit-btn, .delete-btn').forEach(el => el.style.display = 'none');
+            }
+        }
+
         // 渲染小孩列表
         function renderChildren() {
             const sortedChildren = [...appData.children].sort((a, b) => b.points - a.points);
@@ -766,24 +808,25 @@
                         <p>還沒有新增任何小孩，快來新增第一個寶貝吧！</p>
                     </div>
                 `;
-                return;
-            }
-            childrenContainer.innerHTML = sortedChildren.map((child, index) => `
-                <div class="child-item">
-                    <div class="child-name">
-                        ${index === 0 && child.points > 0 ? '👑 ' : ''}${child.name}
-                    </div>
-                    <div class="child-points">${child.points}</div>
-                    <div class="action-buttons">
+            } else {
+                childrenContainer.innerHTML = sortedChildren.map((child, index) => `
+                    <div class="child-item">
+                        <div class="child-name">
+                            ${index === 0 && child.points > 0 ? '👑 ' : ''}${child.name}
+                        </div>
+                        <div class="child-points">${child.points}</div>
+                        <div class="action-buttons" style="${userRole !== 'admin' ? 'display: none;' : ''}">
                             <button class="edit-child-btn" data-id="${child.id}">✏️</button>
                             <button class="delete-child-btn" data-id="${child.id}">🗑️</button>
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `).join('');
+            }
         }
         
         // 處理小孩編輯
         function handleChildEdit(childId) {
+            if (userRole !== 'admin') { alert("你沒有權限進行此操作。"); return; }
             const child = appData.children.find(c => c.id === childId);
             if (!child) return;
             const newName = prompt("請輸入小孩的新姓名：", child.name);
@@ -795,6 +838,7 @@
         
         // 處理小孩刪除
         function handleChildDelete(childId) {
+            if (userRole !== 'admin') { alert("你沒有權限進行此操作。"); return; }
             if (confirm("確定要刪除這個小孩及其所有記錄嗎？此操作無法復原！")) {
                 appData.children = appData.children.filter(c => c.id !== childId);
                 saveData();
@@ -818,7 +862,7 @@
                         <div class="reward-name">${reward.name}</div>
                         <div class="reward-price">${reward.cost} 點</div>
                     </div>
-                    <div class="action-buttons">
+                    <div class="action-buttons" style="${userRole !== 'admin' ? 'display: none;' : ''}">
                         <button class="edit-btn" data-id="${reward.id}">✏️</button>
                         <button class="delete-btn" data-id="${reward.id}">🗑️</button>
                     </div>
@@ -831,7 +875,7 @@
             commonReasonsList.innerHTML = appData.commonReasons.map(reason => `
                 <li>
                     ${reason}
-                    <span class="delete-reason" data-reason="${reason}">×</span>
+                    <span class="delete-reason" data-reason="${reason}" style="${userRole !== 'admin' ? 'display: none;' : ''}">×</span>
                 </li>
             `).join('');
             reasonOptionsDatalist.innerHTML = appData.commonReasons.map(reason => `
@@ -874,7 +918,7 @@
                     <div class="record-points ${record.points > 0 ? 'positive' : 'negative'}">
                         ${record.points > 0 ? '+' : ''}${record.points}
                     </div>
-                    <button class="delete-record" data-id="${record.id}" title="刪除記錄">
+                    <button class="delete-record" data-id="${record.id}" title="刪除記錄" style="${userRole !== 'admin' ? 'display: none;' : ''}">
                         🗑️
                     </button>
                 </div>
@@ -950,6 +994,7 @@
                             renderRecords();
                             renderGoals();
                         }
+                        updateUIVisibility();
                         // 顯示主頁面
                         mainPage.style.display = 'block';
                         familySetupContainer.style.display = 'none';
@@ -997,6 +1042,7 @@
                 db.collection('users').doc(userUid).get().then(doc => {
                     if (doc.exists && doc.data().familyId) {
                         familyId = doc.data().familyId;
+                        userRole = doc.data().role;
                         subscribeToFamilyData(familyId);
                     } else {
                         familySetupContainer.style.display = 'flex';
@@ -1009,6 +1055,7 @@
             } else {
                 userUid = null;
                 familyId = null;
+                userRole = null;
                 authContainer.style.display = 'flex';
                 if (unsubscribeFromFamily) {
                     unsubscribeFromFamily();
@@ -1082,11 +1129,10 @@
         // 建立新家庭按鈕
         document.getElementById('createFamilyBtn').addEventListener('click', () => {
             const newFamilyId = generateUniqueId();
-            // 在 users 文件中設定家庭 ID
-            db.collection('users').doc(userUid).set({ familyId: newFamilyId }).then(() => {
+            // 在 users 文件中設定家庭 ID 和角色
+            db.collection('users').doc(userUid).set({ familyId: newFamilyId, role: 'admin' }).then(() => {
                 familyCodeDisplay.textContent = `你的家庭代碼是：${newFamilyId}`;
                 familyCodeDisplay.style.display = 'block';
-                // 訂閱新建立的家庭資料
                 subscribeToFamilyData(newFamilyId);
             }).catch(error => {
                 console.error("Error creating family:", error);
@@ -1101,11 +1147,10 @@
                 alert("請輸入家庭代碼！");
                 return;
             }
-            // 檢查家庭代碼是否存在
             db.collection('families').doc(inputCode).get().then(doc => {
                 if (doc.exists) {
-                    // 更新使用者文件以加入此家庭
-                    return db.collection('users').doc(userUid).set({ familyId: inputCode }).then(() => {
+                    // 更新使用者文件以加入此家庭，並設定角色為 member
+                    return db.collection('users').doc(userUid).set({ familyId: inputCode, role: 'member' }).then(() => {
                         subscribeToFamilyData(inputCode);
                     });
                 } else {
@@ -1119,6 +1164,7 @@
 
         // 新增小孩
         addChildBtn.addEventListener('click', () => {
+            if (userRole !== 'admin') { alert("你沒有權限進行此操作。"); return; }
             const name = childNameInput.value.trim();
             if (!name) { alert('請輸入小孩姓名！'); return; }
             if (appData.children.some(child => child.name === name)) { alert('這個名稱已經存在了！'); return; }
@@ -1129,6 +1175,7 @@
 
         // 獎勵管理
         addUpdateRewardBtn.addEventListener('click', () => {
+            if (userRole !== 'admin') { alert("你沒有權限進行此操作。"); return; }
             const name = rewardNameInput.value.trim();
             const cost = parseInt(rewardCostInput.value);
             if (!name || isNaN(cost) || cost <= 0) {
@@ -1173,6 +1220,7 @@
 
         // 設定目標
         document.getElementById('setGoalBtn').addEventListener('click', () => {
+            if (userRole !== 'admin') { alert("你沒有權限進行此操作。"); return; }
             const reason = goalReasonInput.value.trim();
             const points = parseInt(goalPointsInput.value);
             if (!reason || !points || points <= 0) { alert('請輸入有效的目標名稱和點數！'); return; }
@@ -1225,6 +1273,7 @@
         recordsContainer.addEventListener('click', (e) => {
             const deleteBtn = e.target.closest('.delete-record');
             if (deleteBtn && confirm('確定要刪除這筆記錄嗎？')) {
+                if (userRole !== 'admin') { alert("你沒有權限進行此操作。"); return; }
                 const recordId = parseInt(deleteBtn.dataset.id);
                 const child = appData.children.find(c => c.id === currentChildId);
                 if (!child) return;
@@ -1241,6 +1290,7 @@
             const editBtn = e.target.closest('.edit-btn');
             const deleteBtn = e.target.closest('.delete-btn');
             if (editBtn) {
+                if (userRole !== 'admin') { alert("你沒有權限進行此操作。"); return; }
                 const rewardId = parseInt(editBtn.dataset.id);
                 const reward = appData.rewardsList.find(r => r.id === rewardId);
                 if (reward) {
@@ -1254,6 +1304,7 @@
                     rewardNameInput.focus();
                 }
             } else if (deleteBtn) {
+                if (userRole !== 'admin') { alert("你沒有權限進行此操作。"); return; }
                 const rewardId = parseInt(deleteBtn.dataset.id);
                 if (confirm('確定要刪除這個獎勵嗎？')) {
                     appData.rewardsList = appData.rewardsList.filter(r => r.id !== rewardId);
@@ -1266,6 +1317,7 @@
         commonReasonsList.addEventListener('click', (e) => {
             const deleteBtn = e.target.closest('.delete-reason');
             if (deleteBtn) {
+                if (userRole !== 'admin') { alert("你沒有權限進行此操作。"); return; }
                 const reasonToDelete = deleteBtn.dataset.reason;
                 appData.commonReasons = appData.commonReasons.filter(reason => reason !== reasonToDelete);
                 saveData();

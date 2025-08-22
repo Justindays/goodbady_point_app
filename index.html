@@ -1343,7 +1343,7 @@
             const deleteBtn = e.target.closest('.delete-record');
             if (deleteBtn && confirm('確定要刪除這筆記錄嗎？')) {
                 if (userRole !== 'admin') { alert("你沒有權限進行此操作。"); return; }
-                const recordId = parseInt(deleteBtn.dataset.id);
+                const recordId = deleteBtn.dataset.id; // <-- 修正：移除 parseInt()
                 const child = appData.children.find(c => c.id === currentChildId);
                 if (!child) return;
                 const recordIndex = child.records.findIndex(r => r.id === recordId);

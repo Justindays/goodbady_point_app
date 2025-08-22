@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>好寶寶點數記錄 (家庭共用版)</title>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', '微軟雅黑', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+            color: white;
+            text-align: center;
+            padding: 30px 20px;
+        }
+
+        .header h1 {
+            font-size: 2.2em;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+        
+        #authContainer, #familySetupContainer {
+            text-align: center;
+            padding: 50px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        #authContainer h2, #familySetupContainer h2 {
+            font-size: 1.5em;
+            color: #333;
+        }
+        
+        .login-btn {
+            background-color: #4285F4;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        
+        .login-btn:hover {
+            background-color: #3367D6;
+        }
+
+        .add-child-section, .add-record-section, .rewards-section, .goals-section {
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 25px;
+            color: white;
+        }
+
+        .add-child-section {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+        }
+
+        .add-record-section {
+            background: linear-gradient(135deg, #fd79a8, #fdcb6e);
+        }
+
+        .rewards-section {
+            background: linear-gradient(135deg, #a400a4, #c900c9);
+        }
+
+        .goals-section {
+            background: linear-gradient(135deg, #6a11cb, #2575fc);
+        }
+
+        .add-child-section h2, .add-record-section h3, .rewards-section h3, .goals-section h3 {
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .input-group input, .input-group select {
+            flex: 1;
+            padding: 12px 18px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.9);
+            transition: all 0.3s ease;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            background: white;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #ff9a56, #ffad56);
+            color: white;
+            box-shadow: 0 5px 15px rgba(255, 154, 86, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 154, 86, 0.6);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #636e72, #2d3436);
+            color: white;
+        }
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99, 110, 114, 0.6);
+        }
+        
+        .children-list, .records-list, .rewards-list {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            margin-bottom: 25px;
+        }
+
+        .list-header {
+            background: linear-gradient(135deg, #a8edea, #fed6e3);
+            padding: 20px 25px;
+            border-radius: 15px 15px 0 0;
+        }
+
+        .list-header h2 {
+            color: #333;
+            font-size: 1.4em;
+        }
+
+        .child-item, .record-item, .reward-item {
+            padding: 20px 25px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        
+        .child-item {
+             cursor: pointer;
+        }
+
+        .child-item:hover {
+            background: linear-gradient(135deg, #ffeaa7, #fab1a0);
+            transform: translateX(5px);
+        }
+        
+        .child-item:last-child, .record-item:last-child, .reward-item:last-child {
+            border-bottom: none;
+        }
+
+        .child-name, .reward-name {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #333;
+            flex-grow: 1;
+        }
+        
+        .child-points {
+            font-size: 2.2em;
+            font-weight: bold;
+            padding: 8px 18px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+            color: white;
+            box-shadow: 0 5px 15px rgba(116, 185, 255, 0.4);
+        }
+        
+        .child-item .action-buttons, .reward-item .action-buttons {
+            display: flex;
+            gap: 5px;
+            margin-left: 10px;
+        }
+
+        .child-item .action-buttons button, .reward-item .action-buttons button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1em;
+            padding: 5px;
+        }
+        
+        .child-item .action-buttons .edit-btn, .reward-item .action-buttons .edit-btn {
+            color: #2980b9;
+        }
+        
+        .child-item .action-buttons .delete-btn, .reward-item .action-buttons .delete-btn {
+            color: #e74c3c;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            color: #666;
+        }
+
+        .empty-state div {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        .empty-state p {
+            font-size: 1.2em;
+        }
+
+        /* 小孩詳細頁面樣式 */
+        .child-detail {
+            display: none;
+        }
+
+        .back-btn {
+            background: linear-gradient(135deg, #636e72, #2d3436);
+            color: white;
+            margin-bottom: 20px;
+        }
+
+        .back-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99, 110, 114, 0.6);
+        }
+
+        .detail-header {
+            background: linear-gradient(135deg, #a8edea, #fed6e3);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .detail-header h2 {
+            font-size: 1.8em;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .detail-points {
+            font-size: 3em;
+            font-weight: bold;
+            color: #0984e3;
+            margin-bottom: 10px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ffd33d, #ff8c00);
+            transition: width 0.5s ease-in-out;
+        }
+
+        .record-info {
+            flex: 1;
+        }
+
+        .record-reason {
+            font-size: 1.1em;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .record-time {
+            font-size: 0.85em;
+            color: #666;
+        }
+
+        .record-points {
+            font-size: 1.3em;
+            font-weight: bold;
+            padding: 5px 12px;
+            border-radius: 15px;
+            color: white;
+        }
+
+        .record-points.positive {
+            background: linear-gradient(135deg, #00b894, #00a085);
+        }
+
+        .record-points.negative {
+            background: linear-gradient(135deg, #e17055, #d63031);
+        }
+
+        .delete-record, .redeem-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2em;
+            padding: 5px;
+            margin-left: 10px;
+        }
+
+        .delete-record {
+            color: #e17055;
+        }
+
+        .delete-record:hover {
+            color: #d63031;
+        }
+
+        .redeem-btn {
+            color: #3498db;
+            font-weight: bold;
+        }
+
+        .redeem-btn:hover {
+            color: #2980b9;
+        }
+
+        .reward-info {
+            flex: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .reward-price {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #8e44ad;
+        }
+
+        .reward-item {
+            cursor: default;
+        }
+
+        .input-group input[list] {
+            flex: 1;
+        }
+        .reason-options {
+            padding: 20px;
+            background: white;
+            border-radius: 15px;
+            margin-top: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .reason-options h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+        .reason-options ul {
+            list-style: none;
+            padding: 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .reason-options li {
+            background: #f0f0f0;
+            padding: 8px 12px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            color: #555;
+            display: flex;
+            align-items: center;
+        }
+        .reason-options li span {
+            cursor: pointer;
+            margin-left: 5px;
+            color: #e17055;
+            font-size: 1em;
+            font-weight: bold;
+        }
+        .reason-options li span:hover {
+            color: #d63031;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌟 好寶寶點數記錄 (家庭共用版)</h1>
+            <p>使用 Google 帳號，與家人同步資料！</p>
+        </div>
+
+        <div id="authContainer" style="display: none;">
+            <h2>請先登入</h2>
+            <button class="login-btn" id="signInBtn">使用 Google 帳號登入</button>
+        </div>
+
+        <div id="familySetupContainer" style="display: none;">
+            <h2>設定你的家庭</h2>
+            <div style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
+                <button class="btn btn-primary" id="createFamilyBtn">建立一個新家庭</button>
+                <p>或</p>
+                <div class="input-group">
+                    <input type="text" id="familyCodeInput" placeholder="輸入家庭代碼..." style="text-align: center;">
+                    <button class="btn btn-secondary" id="joinFamilyBtn">加入現有家庭</button>
+                </div>
+            </div>
+            <p id="familyCodeDisplay" style="color: #666; font-size: 0.9em; display: none;"></p>
+        </div>
+
+        <div id="mainPage" style="display: none;">
+            <div class="content">
+                <div class="add-child-section">
+                    <h2>➕ 新增小孩</h2>
+                    <div class="input-group">
+                        <input type="text" id="childName" placeholder="輸入小孩姓名..." maxlength="20">
+                        <button class="btn btn-primary" id="addChildBtn">新增</button>
+                    </div>
+                </div>
+                
+                <div class="children-list">
+                    <div class="list-header">
+                        <h2>👨‍👩‍👧‍👦 小孩列表</h2>
+                    </div>
+                    <div id="childrenContainer">
+                        <div class="empty-state">
+                            <div>🎈</div>
+                            <p>還沒有新增任何小孩，快來新增第一個寶貝吧！</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="childDetailPage" class="child-detail">
+            <div class="content">
+                <button class="btn back-btn" id="backToMainBtn">← 返回列表</button>
+                
+                <div class="detail-header">
+                    <h2 id="detailChildName">小孩姓名</h2>
+                    <div class="detail-points" id="detailChildPoints">0</div>
+                    <p>目前點數</p>
+                    <div id="goalSection">
+                        <p id="goalText"></p>
+                        <div class="progress-bar">
+                            <div class="progress-bar-fill" id="goalProgressBar"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="goals-section">
+                    <h3>🏆 設定目標</h3>
+                    <div class="input-group">
+                        <input type="text" id="goalReason" placeholder="目標名稱..." maxlength="50">
+                        <input type="number" id="goalPoints" placeholder="目標點數..." min="1">
+                        <button class="btn btn-primary" id="setGoalBtn">設定</button>
+                    </div>
+                </div>
+
+                <div class="add-record-section">
+                    <h3>📝 新增記錄</h3>
+                    <div class="record-form">
+                        <div class="input-group">
+                            <input type="text" id="recordReason" placeholder="加扣點原因..." list="reasonOptions" maxlength="50">
+                            <datalist id="reasonOptions"></datalist>
+                            <select id="recordPoints">
+                                <option value="1">+1</option>
+                                <option value="2">+2</option>
+                                <option value="3">+3</option>
+                                <option value="5">+5</option>
+                                <option value="10">+10</option>
+                                <option value="-1">-1</option>
+                                <option value="-2">-2</option>
+                                <option value="-3">-3</option>
+                                <option value="-5">-5</option>
+                                <option value="-10">-10</option>
+                            </select>
+                            <button class="btn btn-primary" id="addRecordBtn">新增</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="reason-options">
+                    <h3>常用原因清單</h3>
+                    <ul id="commonReasonsList">
+                        </ul>
+                </div>
+
+                <div class="records-list">
+                    <div class="list-header">
+                        <h2>📋 點數記錄</h2>
+                    </div>
+                    <div id="recordsContainer">
+                        <div class="empty-state">
+                            <div>📝</div>
+                            <p>還沒有任何記錄</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rewards-section">
+                    <h3>🎁 管理獎勵</h3>
+                    <div class="input-group">
+                        <input type="text" id="rewardNameInput" placeholder="獎勵名稱..." maxlength="50">
+                        <input type="number" id="rewardCostInput" placeholder="所需點數..." min="1">
+                        <button class="btn btn-primary" id="addUpdateRewardBtn">新增</button>
+                        <button class="btn btn-secondary" id="cancelEditRewardBtn" style="display: none;">取消</button>
+                    </div>
+                </div>
+
+                <div class="rewards-list">
+                    <div class="list-header">
+                        <h2>獎勵清單</h2>
+                    </div>
+                    <div id="rewardsContainer">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 設定你的 Firebase 專案資訊，**請將以下內容替換為你在步驟二中複製的內容**
+        const firebaseConfig = {
+            apiKey: "AIzaSyDXv8yQ-ycAVGk-0cmg0wtbypuLsw83DJY",
+            authDomain: "goodbaby-points.firebaseapp.com",
+            projectId: "goodbaby-points",
+            storageBucket: "goodbaby-points.firebasestorage.app",
+            messagingSenderId: "91241395721",
+            appId: "1:91241395721:web:7bd00c4b7f253ca137ead8",
+            measurementId: "G-TRL178XR8R"
+        };
+        
+        // 初始化 Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // DOM 元素快取
+        const authContainer = document.getElementById('authContainer');
+        const familySetupContainer = document.getElementById('familySetupContainer');
+        const mainPage = document.getElementById('mainPage');
+        const childDetailPage = document.getElementById('childDetailPage');
+        const childrenContainer = document.getElementById('childrenContainer');
+        const recordsContainer = document.getElementById('recordsContainer');
+        const rewardsContainer = document.getElementById('rewardsContainer');
+        const commonReasonsList = document.getElementById('commonReasonsList');
+        const reasonOptionsDatalist = document.getElementById('reasonOptions');
+        const rewardNameInput = document.getElementById('rewardNameInput');
+        const rewardCostInput = document.getElementById('rewardCostInput');
+        const addUpdateRewardBtn = document.getElementById('addUpdateRewardBtn');
+        const cancelEditRewardBtn = document.getElementById('cancelEditRewardBtn');
+        const childNameInput = document.getElementById('childName');
+        const addChildBtn = document.getElementById('addChildBtn');
+        const recordReasonInput = document.getElementById('recordReason');
+        const recordPointsSelect = document.getElementById('recordPoints');
+        const goalReasonInput = document.getElementById('goalReason');
+        const goalPointsInput = document.getElementById('goalPoints');
+        const familyCodeInput = document.getElementById('familyCodeInput');
+        const familyCodeDisplay = document.getElementById('familyCodeDisplay');
+
+        // 應用程式狀態
+        let appData = {
+            children: [],
+            commonReasons: [],
+            rewardsList: [],
+        };
+        let currentChildId = null;
+        let currentEditingRewardId = null;
+        let unsubscribeFromFamily = null;
+        let userUid = null;
+        let familyId = null;
+
+        // 輔助函數：生成唯一ID
+        function generateUniqueId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+        }
+
+        // 儲存資料到 Firestore
+        function saveData() {
+            if (familyId) {
+                db.collection('families').doc(familyId).set(appData)
+                    .catch(error => console.error("Error writing family data:", error));
+            }
+        }
+        
+        // 渲染小孩列表
+        function renderChildren() {
+            const sortedChildren = [...appData.children].sort((a, b) => b.points - a.points);
+            if (appData.children.length === 0) {
+                childrenContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div>🎈</div>
+                        <p>還沒有新增任何小孩，快來新增第一個寶貝吧！</p>
+                    </div>
+                `;
+                return;
+            }
+            childrenContainer.innerHTML = sortedChildren.map((child, index) => `
+                <div class="child-item">
+                    <div class="child-name">
+                        ${index === 0 && child.points > 0 ? '👑 ' : ''}${child.name}
+                    </div>
+                    <div class="child-points">${child.points}</div>
+                    <div class="action-buttons">
+                            <button class="edit-child-btn" data-id="${child.id}">✏️</button>
+                            <button class="delete-child-btn" data-id="${child.id}">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // 處理小孩編輯
+        function handleChildEdit(childId) {
+            const child = appData.children.find(c => c.id === childId);
+            if (!child) return;
+            const newName = prompt("請輸入小孩的新姓名：", child.name);
+            if (newName && newName.trim() !== "") {
+                child.name = newName.trim();
+                saveData();
+            }
+        }
+        
+        // 處理小孩刪除
+        function handleChildDelete(childId) {
+            if (confirm("確定要刪除這個小孩及其所有記錄嗎？此操作無法復原！")) {
+                appData.children = appData.children.filter(c => c.id !== childId);
+                saveData();
+            }
+        }
+
+        // 渲染獎勵清單
+        function renderRewards() {
+            if (appData.rewardsList.length === 0) {
+                rewardsContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div>🎁</div>
+                        <p>沒有可兌換的獎勵</p>
+                    </div>
+                `;
+                return;
+            }
+            rewardsContainer.innerHTML = appData.rewardsList.map(reward => `
+                <div class="reward-item" data-id="${reward.id}">
+                    <div class="reward-info">
+                        <div class="reward-name">${reward.name}</div>
+                        <div class="reward-price">${reward.cost} 點</div>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="edit-btn" data-id="${reward.id}">✏️</button>
+                        <button class="delete-btn" data-id="${reward.id}">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // 渲染常用原因列表和 datalist
+        function renderCommonReasons() {
+            commonReasonsList.innerHTML = appData.commonReasons.map(reason => `
+                <li>
+                    ${reason}
+                    <span class="delete-reason" data-reason="${reason}">×</span>
+                </li>
+            `).join('');
+            reasonOptionsDatalist.innerHTML = appData.commonReasons.map(reason => `
+                <option value="${reason}"></option>
+            `).join('');
+        }
+
+        // 顯示小孩詳細頁面
+        function showChildDetail(childId) {
+            const child = appData.children.find(c => c.id === childId);
+            if (!child) return;
+            currentChildId = childId;
+            document.getElementById('detailChildName').textContent = child.name;
+            document.getElementById('detailChildPoints').textContent = child.points;
+            mainPage.style.display = 'none';
+            childDetailPage.style.display = 'block';
+            renderRecords();
+            renderGoals();
+        }
+
+        // 渲染記錄列表
+        function renderRecords() {
+            const child = appData.children.find(c => c.id === currentChildId);
+            const records = child?.records || [];
+            if (records.length === 0) {
+                recordsContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div>📝</div>
+                        <p>還沒有任何記錄</p>
+                    </div>
+                `;
+                return;
+            }
+            recordsContainer.innerHTML = records.map(record => `
+                <div class="record-item" data-id="${record.id}">
+                    <div class="record-info">
+                        <div class="record-reason">${record.reason}</div>
+                        <div class="record-time">${formatTime(record.timestamp)}</div>
+                    </div>
+                    <div class="record-points ${record.points > 0 ? 'positive' : 'negative'}">
+                        ${record.points > 0 ? '+' : ''}${record.points}
+                    </div>
+                    <button class="delete-record" data-id="${record.id}" title="刪除記錄">
+                        🗑️
+                    </button>
+                </div>
+            `).join('');
+        }
+        
+        // 渲染目標進度
+        function renderGoals() {
+            const child = appData.children.find(c => c.id === currentChildId);
+            const goalSection = document.getElementById('goalSection');
+            const goalText = document.getElementById('goalText');
+            const goalProgressBar = document.getElementById('goalProgressBar');
+            if (child.goal && child.goal.points > 0) {
+                const progress = Math.min(100, (child.points / child.goal.points) * 100);
+                goalText.textContent = `目標：${child.goal.reason} (${child.points} / ${child.goal.points} 點)`;
+                goalProgressBar.style.width = `${progress}%`;
+                goalSection.style.display = 'block';
+            } else {
+                goalSection.style.display = 'none';
+            }
+        }
+        
+        // 格式化時間
+        function formatTime(timestamp) {
+            try {
+                const date = new Date(timestamp);
+                const now = new Date();
+                const diffMs = now - date;
+                const diffMins = Math.floor(diffMs / 60000);
+                if (diffMins < 1) return '剛剛';
+                if (diffMins < 60) return `${diffMins} 分鐘前`;
+                if (diffMins < 1440) return `${Math.floor(diffMins / 60)} 小時前`;
+                return date.toLocaleDateString('zh-TW', {
+                    month: 'numeric',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch (error) { return '時間未知'; }
+        }
+
+        // 處理獎勵管理
+        function resetRewardForm() {
+            rewardNameInput.value = '';
+            rewardCostInput.value = '';
+            addUpdateRewardBtn.textContent = '新增';
+            addUpdateRewardBtn.classList.remove('btn-secondary');
+            addUpdateRewardBtn.classList.add('btn-primary');
+            cancelEditRewardBtn.style.display = 'none';
+            currentEditingRewardId = null;
+        }
+
+        // 訂閱家庭資料
+        function subscribeToFamilyData(newFamilyId) {
+            if (unsubscribeFromFamily) {
+                unsubscribeFromFamily();
+            }
+            familyId = newFamilyId;
+            // 訂閱 Firestore 資料，實現即時同步
+            unsubscribeFromFamily = db.collection('families').doc(familyId)
+                .onSnapshot(doc => {
+                    if (doc.exists) {
+                        appData = doc.data();
+                        if (!appData.children) appData.children = [];
+                        if (!appData.commonReasons) appData.commonReasons = [];
+                        if (!appData.rewardsList) appData.rewardsList = [];
+                    } else {
+                        appData = { children: [], commonReasons: [], rewardsList: [] };
+                        saveData(); // 建立空資料
+                    }
+                    renderChildren();
+                    renderRewards();
+                    renderCommonReasons();
+                    // 如果在詳細頁面，也重新渲染
+                    if(currentChildId) {
+                        renderRecords();
+                        renderGoals();
+                    }
+                }, error => {
+                    console.error("Firestore snapshot error:", error);
+                    alert("載入資料失敗，請檢查網路或重新登入。");
+                });
+            
+            mainPage.style.display = 'block';
+            familySetupContainer.style.display = 'none';
+        }
+
+        // --- 事件監聽器 ---
+        
+        // Firebase 登入狀態變更監聽器
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                userUid = user.uid;
+                authContainer.style.display = 'none';
+
+                // 檢查使用者是否已經有家庭 ID
+                db.collection('users').doc(userUid).get().then(doc => {
+                    if (doc.exists && doc.data().familyId) {
+                        familyId = doc.data().familyId;
+                        subscribeToFamilyData(familyId);
+                    } else {
+                        // 顯示家庭設定頁面
+                        familySetupContainer.style.display = 'flex';
+                        mainPage.style.display = 'none';
+                        childDetailPage.style.display = 'none';
+                    }
+                }).catch(error => {
+                    console.error("Error getting user document:", error);
+                    alert("載入使用者資料失敗，請檢查網路或重新登入。");
+                });
+
+            } else {
+                userUid = null;
+                familyId = null;
+                authContainer.style.display = 'flex';
+                mainPage.style.display = 'none';
+                familySetupContainer.style.display = 'none';
+                childDetailPage.style.display = 'none';
+                if (unsubscribeFromFamily) {
+                    unsubscribeFromFamily();
+                }
+            }
+        });
+
+        // 登入按鈕
+        document.getElementById('signInBtn').addEventListener('click', () => {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider).catch(error => {
+                console.error("Google Sign-in Error:", error);
+                alert("登入失敗，請稍後再試。");
+            });
+        });
+
+        // 建立新家庭按鈕
+        document.getElementById('createFamilyBtn').addEventListener('click', () => {
+            const newFamilyId = generateUniqueId();
+            // 在 users 文件中設定家庭 ID
+            db.collection('users').doc(userUid).set({ familyId: newFamilyId }).then(() => {
+                familyCodeDisplay.textContent = `你的家庭代碼是：${newFamilyId}`;
+                familyCodeDisplay.style.display = 'block';
+                // 訂閱新建立的家庭資料
+                subscribeToFamilyData(newFamilyId);
+            }).catch(error => {
+                console.error("Error creating family:", error);
+                alert("建立家庭失敗，請稍後再試。");
+            });
+        });
+
+        // 加入現有家庭按鈕
+        document.getElementById('joinFamilyBtn').addEventListener('click', () => {
+            const inputCode = familyCodeInput.value.trim();
+            if (!inputCode) {
+                alert("請輸入家庭代碼！");
+                return;
+            }
+            // 檢查家庭代碼是否存在
+            db.collection('families').doc(inputCode).get().then(doc => {
+                if (doc.exists) {
+                    // 更新使用者文件以加入此家庭
+                    return db.collection('users').doc(userUid).set({ familyId: inputCode }).then(() => {
+                        subscribeToFamilyData(inputCode);
+                    });
+                } else {
+                    alert("家庭代碼無效，請重新檢查。");
+                }
+            }).catch(error => {
+                console.error("Error joining family:", error);
+                alert("加入家庭失敗，請稍後再試。");
+            });
+        });
+
+        // 新增小孩
+        addChildBtn.addEventListener('click', () => {
+            const name = childNameInput.value.trim();
+            if (!name) { alert('請輸入小孩姓名！'); return; }
+            if (appData.children.some(child => child.name === name)) { alert('這個名稱已經存在了！'); return; }
+            appData.children.push({ id: generateUniqueId(), name: name, points: 0, records: [], goal: null });
+            childNameInput.value = '';
+            saveData();
+        });
+
+        // 獎勵管理
+        addUpdateRewardBtn.addEventListener('click', () => {
+            const name = rewardNameInput.value.trim();
+            const cost = parseInt(rewardCostInput.value);
+            if (!name || isNaN(cost) || cost <= 0) {
+                alert('請輸入有效的獎勵名稱和點數！');
+                return;
+            }
+            if (currentEditingRewardId) {
+                const rewardIndex = appData.rewardsList.findIndex(r => r.id === currentEditingRewardId);
+                if (rewardIndex !== -1) {
+                    appData.rewardsList[rewardIndex].name = name;
+                    appData.rewardsList[rewardIndex].cost = cost;
+                }
+            } else {
+                appData.rewardsList.push({ id: generateUniqueId(), name, cost });
+            }
+            saveData();
+            resetRewardForm();
+        });
+
+        cancelEditRewardBtn.addEventListener('click', () => {
+            resetRewardForm();
+        });
+        
+        // 新增記錄
+        document.getElementById('addRecordBtn').addEventListener('click', () => {
+            const reason = recordReasonInput.value.trim();
+            const points = parseInt(recordPointsSelect.value);
+            if (!reason) { alert('請輸入加扣點原因！'); return; }
+            if (!appData.commonReasons.includes(reason)) {
+                appData.commonReasons.unshift(reason);
+                if (appData.commonReasons.length > 10) { appData.commonReasons.pop(); }
+            }
+            const child = appData.children.find(c => c.id === currentChildId);
+            if (!child) return;
+            const newRecord = { id: generateUniqueId(), reason, points, timestamp: new Date().toISOString() };
+            child.records.unshift(newRecord);
+            child.points += points;
+            recordReasonInput.value = '';
+            recordPointsSelect.value = '1';
+            saveData();
+        });
+
+        // 設定目標
+        document.getElementById('setGoalBtn').addEventListener('click', () => {
+            const reason = goalReasonInput.value.trim();
+            const points = parseInt(goalPointsInput.value);
+            if (!reason || !points || points <= 0) { alert('請輸入有效的目標名稱和點數！'); return; }
+            const child = appData.children.find(c => c.id === currentChildId);
+            if (!child) return;
+            child.goal = { reason, points };
+            goalReasonInput.value = '';
+            goalPointsInput.value = '';
+            saveData();
+        });
+        
+        // 回到主頁面
+        document.getElementById('backToMainBtn').addEventListener('click', () => {
+            currentChildId = null;
+            mainPage.style.display = 'block';
+            childDetailPage.style.display = 'none';
+        });
+
+        // 事件委派
+        childrenContainer.addEventListener('click', (e) => {
+            const childItem = e.target.closest('.child-item');
+            if (!childItem) return;
+            
+            const editBtn = e.target.closest('.edit-child-btn');
+            const deleteBtn = e.target.closest('.delete-child-btn');
+            
+            const childNameElement = childItem.querySelector('.child-name').textContent.trim();
+            const child = appData.children.find(c => c.name === childNameElement.replace('👑', '').trim());
+
+            if (editBtn) {
+                 handleChildEdit(child.id);
+            } else if (deleteBtn) {
+                 handleChildDelete(child.id);
+            } else {
+                showChildDetail(child.id);
+            }
+        });
+
+        recordsContainer.addEventListener('click', (e) => {
+            const deleteBtn = e.target.closest('.delete-record');
+            if (deleteBtn && confirm('確定要刪除這筆記錄嗎？')) {
+                const recordId = parseInt(deleteBtn.dataset.id);
+                const child = appData.children.find(c => c.id === currentChildId);
+                if (!child) return;
+                const recordIndex = child.records.findIndex(r => r.id === recordId);
+                if (recordIndex === -1) return;
+                const record = child.records[recordIndex];
+                child.points -= record.points;
+                child.records.splice(recordIndex, 1);
+                saveData();
+            }
+        });
+
+        rewardsContainer.addEventListener('click', (e) => {
+            const editBtn = e.target.closest('.edit-btn');
+            const deleteBtn = e.target.closest('.delete-btn');
+            if (editBtn) {
+                const rewardId = parseInt(editBtn.dataset.id);
+                const reward = appData.rewardsList.find(r => r.id === rewardId);
+                if (reward) {
+                    rewardNameInput.value = reward.name;
+                    rewardCostInput.value = reward.cost;
+                    addUpdateRewardBtn.textContent = '更新';
+                    addUpdateRewardBtn.classList.remove('btn-primary');
+                    addUpdateRewardBtn.classList.add('btn-secondary');
+                    cancelEditRewardBtn.style.display = 'inline-block';
+                    currentEditingRewardId = rewardId;
+                    rewardNameInput.focus();
+                }
+            } else if (deleteBtn) {
+                const rewardId = parseInt(deleteBtn.dataset.id);
+                if (confirm('確定要刪除這個獎勵嗎？')) {
+                    appData.rewardsList = appData.rewardsList.filter(r => r.id !== rewardId);
+                    saveData();
+                    resetRewardForm();
+                }
+            }
+        });
+
+        commonReasonsList.addEventListener('click', (e) => {
+            const deleteBtn = e.target.closest('.delete-reason');
+            if (deleteBtn) {
+                const reasonToDelete = deleteBtn.dataset.reason;
+                appData.commonReasons = appData.commonReasons.filter(reason => reason !== reasonToDelete);
+                saveData();
+            }
+        });
+
+        // 鍵盤事件處理
+        childNameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addChildBtn.click(); });
+        recordReasonInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') document.getElementById('addRecordBtn').click(); });
+        goalPointsInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') document.getElementById('setGoalBtn').click(); });
+    </script>
+</body>
+</html>

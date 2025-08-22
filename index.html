@@ -834,7 +834,7 @@
                 `;
             } else {
                 childrenContainer.innerHTML = sortedChildren.map((child, index) => `
-                    <div class="child-item">
+                    <div class="child-item" data-id="${child.id}">
                         <div class="child-name">
                             ${index === 0 && child.points > 0 ? '👑 ' : ''}${child.name}
                         </div>
@@ -974,18 +974,13 @@
         function formatTime(timestamp) {
             try {
                 const date = new Date(timestamp);
-                const now = new Date();
-                const diffMs = now - date;
-                const diffMins = Math.floor(diffMs / 60000);
-                if (diffMins < 1) return '剛剛';
-                if (diffMins < 60) return `${diffMins} 分鐘前`;
-                if (diffMins < 1440) return `${Math.floor(diffMins / 60)} 小時前`;
-                return date.toLocaleDateString('zh-TW', {
-                    month: 'numeric',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
+                // 格式化為 YYYY-MM-DD HH:mm
+                const year = date.getFullYear();
+                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                const day = date.getDate().toString().padStart(2, '0');
+                const hour = date.getHours().toString().padStart(2, '0');
+                const minute = date.getMinutes().toString().padStart(2, '0');
+                return `${year}-${month}-${day} ${hour}:${minute}`;
             } catch (error) { return '時間未知'; }
         }
 
@@ -1327,8 +1322,9 @@
             const editBtn = e.target.closest('.edit-child-btn');
             const deleteBtn = e.target.closest('.delete-child-btn');
             
-            const childNameElement = childItem.querySelector('.child-name').textContent.trim();
-            const child = appData.children.find(c => c.name === childNameElement.replace('👑', '').trim());
+            const childId = childItem.dataset.id;
+            const child = appData.children.find(c => c.id === childId);
+            if (!child) return;
 
             if (editBtn) {
                  handleChildEdit(child.id);
@@ -1343,7 +1339,7 @@
             const deleteBtn = e.target.closest('.delete-record');
             if (deleteBtn && confirm('確定要刪除這筆記錄嗎？')) {
                 if (userRole !== 'admin') { alert("你沒有權限進行此操作。"); return; }
-                const recordId = deleteBtn.dataset.id; // <-- 修正：移除 parseInt()
+                const recordId = deleteBtn.dataset.id;
                 const child = appData.children.find(c => c.id === currentChildId);
                 if (!child) return;
                 const recordIndex = child.records.findIndex(r => r.id === recordId);

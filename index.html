@@ -1014,15 +1014,16 @@
                         renderChildren();
                         renderRewards();
                         renderCommonReasons();
-                        if (currentChildId) {
-                            renderRecords();
-                            renderGoals();
-                        }
                         updateUIVisibility();
-                        // 顯示主頁面
-                        mainPage.style.display = 'block';
+
+                        // 根據 currentChildId 決定顯示哪個頁面
+                        if (currentChildId) {
+                            showChildDetail(currentChildId);
+                        } else {
+                            mainPage.style.display = 'block';
+                            childDetailPage.style.display = 'none';
+                        }
                         familySetupContainer.style.display = 'none';
-                        childDetailPage.style.display = 'none';
                     } else {
                         // 如果家庭文件不存在，導回家庭設定頁面
                         familySetupContainer.style.display = 'flex';
